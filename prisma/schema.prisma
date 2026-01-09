@@ -1,0 +1,312 @@
+// Prisma Schema for Padose Buyer App
+// Mapped to actual database structure
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Seller Model (Store Owners)
+model Seller {
+  sellerId            BigInt    @id @default(autoincrement()) @map("seller_id")
+  sellerName          String    @map("seller_name")
+  registeredOn        DateTime? @map("registered_on")
+  contactNumber       String?   @map("contact_number")
+  emailAddress        String?   @map("email_address")
+  isActive            Boolean?  @map("is_active")
+  isVerified          Boolean?  @map("is_verified")
+  verifiedOn          DateTime? @map("verified_on")
+  idType              String?   @map("id_type")
+  idNumber            String?   @map("id_number")
+  isIdVerified        Boolean   @default(false) @map("is_id_verified")
+  profileImage        String?   @map("profile_image")
+  subscriptionPlan    String?   @map("subscription_plan")
+  subscriptionExpiry  DateTime? @map("subscription_expiry")
+  dateOfBirth         DateTime? @db.Date @map("date_of_birth")
+  gender              String?
+  lastSeenAt          DateTime? @map("last_seen_at")
+  passwordHash         String?   @map("password_hash")
+  emailVerificationToken String? @map("email_verification_token")
+  phoneVerificationToken String? @map("phone_verification_token")
+  emailVerifiedAt     DateTime? @map("email_verified_at")
+  phoneVerifiedAt      DateTime? @map("phone_verified_at")
+  userType            String?   @default("seller") @map("user_type")
+  language            String?   @default("en") @map("language")
+  passwordResetToken  String?   @map("password_reset_token")
+  passwordResetTokenExpiresAt DateTime? @map("password_reset_token_expires_at")
+  registrationSource  String?   @default("direct") @map("registration_source")
+
+  businesses Business[]
+
+  @@map("seller")
+  @@index([contactNumber], map: "idx_seller_contact_number")
+}
+
+// Business Model (Stores)
+model Business {
+  businessId          BigInt    @id @default(autoincrement()) @map("business_id")
+  businessName        String    @map("business_name")
+  sellerId            BigInt?   @map("seller_id")
+  contactNumber       String?   @map("contact_number")
+  whatsappNumber      String?   @map("whatsapp_number")
+  emailAddress        String?   @map("email_address")
+  isVerified          Boolean?  @map("is_verified")
+  isActive            Boolean?  @map("is_active")
+  address             String?
+  city                String?
+  state               String?
+  country             String?
+  pincode             String?
+  sellRegion          String?   @map("sell_region")
+  logoImage           String?   @map("logo_image")
+  idType              String?   @map("id_type")
+  idNumber            String?   @map("id_number")
+  isIdVerified        Boolean?  @map("is_id_verified")
+  upiId               String?   @map("upi_id")
+  registrationDt      DateTime? @map("registration_dt")
+  verifiedDt          DateTime? @map("verified_dt")
+  businessTiming      Json?     @map("business_timing")
+  tags                Json?
+  description         String?
+  rating              Float?
+  latitude            Decimal?  @db.Decimal(10, 8)
+  longitude           Decimal?  @db.Decimal(11, 8)
+  district            String    @db.VarChar(255)
+  storeStatus         String?    @default("auto") @db.VarChar(20) @map("store_status")
+  autoCloseEnabled    Boolean?   @default(true) @map("auto_close_enabled")
+  manualStatusUntil   DateTime?  @map("manual_status_until")
+  breakStartTime      DateTime?  @db.Time @map("break_start_time")
+  breakEndTime        DateTime?  @db.Time @map("break_end_time")
+  acceptingOrders     Boolean?   @default(true) @map("accepting_orders")
+  holidayMode         Boolean?   @default(false) @map("holiday_mode")
+  holidayMessage      String?    @db.VarChar(500) @map("holiday_message")
+  officialBusinessName String?   @db.VarChar(255) @map("official_business_name")
+  gstNumber           String?    @db.VarChar(50) @map("gst_number")
+  panNumber           String?    @db.VarChar(50) @map("pan_number")
+  businessSlug        String?    @map("business_slug")
+
+  seller              Seller?    @relation(fields: [sellerId], references: [sellerId], onDelete: SetNull)
+  categories          Category[]
+  services            Service[]
+
+  @@map("business")
+  @@index([district], map: "idx_business_district")
+  @@index([sellerId], map: "idx_business_seller_id")
+  @@index([latitude, longitude], map: "idx_business_lat_lng")
+  @@index([businessId], map: "idx_business_id")
+  @@index([gstNumber], map: "idx_business_gst")
+  @@index([isActive], map: "idx_business_is_active")
+  @@index([isVerified], map: "idx_business_is_verified")
+  @@index([city], map: "idx_business_city")
+  @@index([pincode], map: "idx_business_pincode")
+  @@index([city, pincode, isActive], map: "idx_business_city_pincode_active")
+  @@index([isVerified, isActive], map: "idx_business_verified_active")
+  @@index([storeStatus, isActive], map: "idx_business_store_status")
+}
+
+// Category Reference Model
+model CategoryRef {
+  categoryRefId       BigInt    @id @default(autoincrement()) @map("category_ref_id")
+  categoryName        String?   @db.VarChar @map("category_name")
+  subCategoryName    String?   @db.VarChar @map("sub_category_name")
+  image               String?
+  isActive            Boolean?  @map("is_active")
+  allowedWeighingTypes String[] @default(["piece"]) @map("allowed_weighing_types")
+  defaultWeighingType String?   @default("piece") @db.VarChar(20) @map("default_weighing_type")
+  categoryType        String?   @default("product") @db.VarChar(20) @map("category_type")
+  updatedAt           DateTime? @default(now()) @map("updated_at")
+  allowedPricingTypes Json?     @map("allowed_pricing_types")
+  defaultPricingType  String?   @db.VarChar(50) @map("default_pricing_type")
+
+  categories          Category[]
+
+  @@map("category_ref")
+}
+
+// Category Model (Business-Category Junction)
+model Category {
+  categoryId          BigInt    @id @default(autoincrement()) @map("category_id")
+  categoryRefId      BigInt    @map("category_ref_id")
+  businessId         BigInt?   @map("business_id")
+  isActive           Boolean?  @map("is_active")
+  isDefault          Boolean   @default(false) @map("is_default")
+
+  categoryRef         CategoryRef @relation(fields: [categoryRefId], references: [categoryRefId])
+  business            Business?  @relation(fields: [businessId], references: [businessId], onDelete: SetNull)
+  products            Product[]
+
+  @@map("category")
+  @@index([categoryRefId], map: "idx_category_ref_id")
+  @@index([businessId, categoryRefId], map: "idx_category_business_ref")
+  @@index([businessId], map: "idx_category_business_id")
+  @@index([isActive], map: "idx_category_is_active")
+}
+
+// Product Model (also used for services with entity_type='service')
+model Product {
+  productId           BigInt    @id @default(autoincrement()) @map("product_id")
+  productName          String    @map("product_name")
+  categoryId           BigInt?   @map("category_id")
+  basePrice            Float?    @map("base_price")
+  hasVariation         Boolean?   @map("has_variation")
+  isActive             Boolean?  @map("is_active")
+  image                String?
+  createdOn            DateTime? @map("created_on")
+  updatedOn            DateTime? @map("updated_on")
+  isApproved           Boolean?  @map("is_approved")
+  reason               String?
+  description          String?
+  isDeleted            Boolean   @default(false) @map("is_deleted")
+  entityType           String    @default("product") @db.VarChar(20) @map("entity_type")
+  serviceLocation      String?   @db.VarChar(50) @map("service_location")
+  serviceDuration      String?   @db.VarChar(100) @map("service_duration")
+  isFeatured           Boolean?  @default(false) @map("is_featured")
+  featuredOrder        Int?      @map("featured_order")
+  featuredSince        DateTime? @map("featured_since")
+  attributes           Json?     @default("{}")
+  brand                String?   @db.VarChar(255)
+  keywords             String[]
+  condition           String?   @db.VarChar(50)
+  bulkUploadGroupId   String?   @db.VarChar(255) @map("bulk_upload_group_id")
+  localDeliveryOnly    Boolean?  @default(false) @map("local_delivery_only")
+  deliveryRadiusKm     Decimal?  @db.Decimal(10, 2) @map("delivery_radius_km")
+  speedDeliveryEnabled Boolean?  @default(false) @map("speed_delivery_enabled")
+  speedDeliveryCharges Decimal?  @db.Decimal(10, 2) @map("speed_delivery_charges")
+  economyDeliveryEnabled Boolean? @default(false) @map("economy_delivery_enabled")
+  economyDeliveryCharges Decimal? @db.Decimal(10, 2) @map("economy_delivery_charges")
+  unitOfMeasure        String?   @map("unit_of_measure")
+  productSlug          String?   @map("product_slug")
+
+  category             Category? @relation(fields: [categoryId], references: [categoryId], onDelete: SetNull)
+  variations           ProductVariation[]
+  images               EntityImage[]
+
+  @@map("product")
+  @@index([categoryId], map: "idx_product_category_id")
+  @@index([isActive], map: "idx_product_active")
+  @@index([productId], map: "idx_product_id")
+  @@index([entityType], map: "idx_product_entity_type")
+  @@index([isDeleted], map: "idx_product_is_deleted")
+  @@index([productSlug], map: "idx_product_slug")
+}
+
+// Product Variation Model
+model ProductVariation {
+  variationId         BigInt    @id @default(autoincrement()) @map("variation_id")
+  displayText          String    @map("display_text")
+  productId            BigInt?   @map("product_id")
+  cutPrice             Float?    @map("cut_price")
+  displayPrice         Float?    @map("display_price")
+  displayImage         String?   @map("display_image")
+  weighingType         String?   @default("piece") @db.VarChar(50) @map("weighing_type")
+  quantity             Decimal?  @default(1.0) @db.Decimal(10, 3)
+  unit                 String?   @db.VarChar(50)
+  pricingType          String?   @default("piece") @db.VarChar(20) @map("pricing_type")
+  variantType          String?   @db.VarChar(50) @map("variant_type")
+  variantValue         String?   @db.VarChar(255) @map("variant_value")
+  variantMetadata      Json?     @default("{}") @map("variant_metadata")
+
+  product              Product?  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+
+  @@map("product_variation")
+  @@index([productId], map: "idx_product_variation_product_id")
+  @@index([variationId], map: "idx_product_variation_id")
+}
+
+// Services Model
+model Service {
+  serviceId            Int       @id @default(autoincrement()) @map("service_id")
+  businessId           BigInt    @map("business_id")
+  serviceName           String    @db.VarChar(255) @map("service_name")
+  description          String?   @db.Text
+  tags                 Json?
+  keywords              Json?
+  basePrice             Decimal   @db.Decimal(10, 2) @map("base_price")
+  cutPrice              Decimal?  @db.Decimal(10, 2) @map("cut_price")
+  categoryId            Int?      @map("category_id")
+  isActive              Boolean?  @default(true) @map("is_active")
+  isDeleted             Boolean?  @default(false) @map("is_deleted")
+  isApproved            Boolean?  @map("is_approved")
+  reason                String?   @db.Text
+  image                 String?
+  entityImages          Json?     @map("entity_images")
+  pricingType           String?   @default("duration") @db.VarChar(50) @map("pricing_type")
+  priceVariations       Json?     @map("price_variations")
+  serviceLocation       String?   @db.VarChar(50) @map("service_location")
+  serviceDuration       String?   @db.VarChar(100) @map("service_duration")
+  estimatedDurationMin  Int?      @map("estimated_duration_min")
+  estimatedDurationMax  Int?      @map("estimated_duration_max")
+  serviceMode           String?   @db.VarChar(50) @map("service_mode")
+  specialRequirements   String?   @db.Text @map("special_requirements")
+  preparationRequired   Boolean?  @default(false) @map("preparation_required")
+  preparationNotes      String?   @db.Text @map("preparation_notes")
+  availableDays         Json?     @map("available_days")
+  dailyTimings          Json?     @map("daily_timings")
+  advanceBookingDays    Int?      @default(7) @map("advance_booking_days")
+  maxBookingsPerDay     Int?      @default(5) @map("max_bookings_per_day")
+  minBookingNoticeHours Int?      @default(24) @map("min_booking_notice_hours")
+  customFields          Json?     @map("custom_fields")
+  createdAt             DateTime? @default(now()) @map("created_at")
+  updatedAt             DateTime? @default(now()) @map("updated_at")
+  localDeliveryOnly     Boolean?  @default(false) @map("local_delivery_only")
+  deliveryRadiusKm       Decimal?  @db.Decimal(10, 2) @map("delivery_radius_km")
+  serviceSlug           String?   @map("service_slug")
+  hasVariation          Boolean?  @default(false) @map("has_variation")
+
+  business              Business? @relation(fields: [businessId], references: [businessId], onDelete: Cascade)
+  variations            ServiceVariation[]
+  images                EntityImage[]
+
+  @@map("services")
+  @@index([businessId], map: "idx_service_business_id")
+  @@index([categoryId], map: "idx_service_category_id")
+  @@index([isActive], map: "idx_service_active")
+  @@index([isDeleted], map: "idx_service_is_deleted")
+  @@index([serviceSlug], map: "idx_service_slug")
+}
+
+// Service Variation Model
+model ServiceVariation {
+  variationId         Int       @id @default(autoincrement()) @map("variation_id")
+  serviceId           Int       @map("service_id")
+  displayPrice        Decimal   @db.Decimal(10, 2) @map("display_price")
+  cutPrice            Decimal?  @db.Decimal(10, 2) @map("cut_price")
+  displayText         String?   @db.VarChar(255) @map("display_text")
+  duration            String?   @db.VarChar(100)
+  unit                String?   @db.VarChar(50)
+  quantity            Decimal?  @db.Decimal(10, 3)
+  description         String?   @db.Text
+  createdAt           DateTime? @default(now()) @map("created_at")
+  updatedAt           DateTime? @default(now()) @map("updated_at")
+
+  service             Service   @relation(fields: [serviceId], references: [serviceId], onDelete: Cascade)
+
+  @@map("service_variation")
+  @@index([serviceId], map: "idx_service_variation_service_id")
+  @@index([variationId], map: "idx_service_variation_id")
+}
+
+// Entity Images Model
+model EntityImage {
+  entityImageId       BigInt    @id @default(autoincrement()) @map("entity_image_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  imageUrl             String?   @map("image_url")
+  productId           BigInt?   @map("product_id")
+  fileName             String?   @map("file_name")
+  displayOrder        Int?      @map("display_order")
+  serviceId           Int?      @map("service_id")
+  s3Key               String?   @map("s3_key")
+
+  product             Product?  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  service             Service?  @relation(fields: [serviceId], references: [serviceId], onDelete: Cascade)
+
+  @@map("entity_images")
+  @@index([productId], map: "idx_entity_images_product_id")
+  @@index([serviceId], map: "idx_entity_images_service_id")
+  @@index([productId, displayOrder], map: "idx_entity_images_display_order")
+  @@index([serviceId, displayOrder], map: "idx_entity_images_service_order")
+}
