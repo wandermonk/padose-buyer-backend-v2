@@ -51,7 +51,7 @@ export class ProductDataAccess {
     options: ProductRepositoryOptions = {}
   ): Promise<{ data: ProductDAO[]; pagination: any }> {
     const page = options.page || 1;
-    const limit = Math.min(options.limit || 20, 100);
+    const limit = Math.min(options.limit || 20, 500);
     const skip = (page - 1) * limit;
 
     // Build category filter if categorySlug provided

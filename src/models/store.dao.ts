@@ -44,7 +44,7 @@ export class StoreDataAccess {
     options: StoreRepositoryOptions = {}
   ): Promise<{ data: BusinessDAO[]; pagination: any }> {
     const page = options.page || 1;
-    const limit = Math.min(options.limit || 20, 100);
+    const limit = Math.min(options.limit || 20, 500);
     const skip = (page - 1) * limit;
 
     const where: Prisma.BusinessWhereInput = {
