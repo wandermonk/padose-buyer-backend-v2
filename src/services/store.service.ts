@@ -19,7 +19,7 @@ export class StoreService {
     search?: string
   ): Promise<StoreListResponse> {
     const result = await this.storeDAO.findAll(
-      { search, isActive: true, isVerified: true },
+      { search, isActive: true },
       { page: params.page, limit: params.limit }
     );
 
