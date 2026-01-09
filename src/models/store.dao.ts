@@ -4,6 +4,8 @@ import type { Prisma } from '@prisma/client';
 const prisma = getPrismaClient();
 
 // Use Prisma-generated types
+// Note: businessTiming and tags are excluded from queries to avoid JSON parsing issues
+// They are set to null in the returned data
 export type BusinessDAO = Prisma.BusinessGetPayload<{
   include: {
     services: {
@@ -15,7 +17,10 @@ export type BusinessDAO = Prisma.BusinessGetPayload<{
       };
     };
   };
-}>;
+}> & {
+  businessTiming?: Prisma.JsonValue | null;
+  tags?: Prisma.JsonValue | null;
+};
 
 export interface StoreRepositoryFilters {
   search?: string;
@@ -60,7 +65,45 @@ export class StoreDataAccess {
         where,
         skip,
         take: limit,
-        include: {
+        select: {
+          businessId: true,
+          businessName: true,
+          sellerId: true,
+          contactNumber: true,
+          whatsappNumber: true,
+          emailAddress: true,
+          isVerified: true,
+          isActive: true,
+          address: true,
+          city: true,
+          state: true,
+          country: true,
+          pincode: true,
+          sellRegion: true,
+          logoImage: true,
+          idType: true,
+          idNumber: true,
+          isIdVerified: true,
+          upiId: true,
+          registrationDt: true,
+          verifiedDt: true,
+          description: true,
+          rating: true,
+          latitude: true,
+          longitude: true,
+          district: true,
+          storeStatus: true,
+          autoCloseEnabled: true,
+          manualStatusUntil: true,
+          breakStartTime: true,
+          breakEndTime: true,
+          acceptingOrders: true,
+          holidayMode: true,
+          holidayMessage: true,
+          officialBusinessName: true,
+          gstNumber: true,
+          panNumber: true,
+          businessSlug: true,
           services: {
             where: { 
               isDeleted: false,
@@ -82,8 +125,15 @@ export class StoreDataAccess {
       prisma.business.count({ where }),
     ]);
 
+    // Add businessTiming and tags as null since we're excluding them to avoid JSON parsing issues
+    const businessesWithDefaults = businesses.map(b => ({
+      ...b,
+      businessTiming: null,
+      tags: null,
+    })) as BusinessDAO[];
+
     return {
-      data: businesses,
+      data: businessesWithDefaults,
       pagination: {
         page,
         limit,
@@ -94,12 +144,50 @@ export class StoreDataAccess {
   }
 
   async findBySlug(slug: string): Promise<BusinessDAO | null> {
-    return prisma.business.findFirst({
+    const business = await prisma.business.findFirst({
       where: { 
         businessSlug: slug, 
         isActive: true 
       },
-      include: {
+      select: {
+        businessId: true,
+        businessName: true,
+        sellerId: true,
+        contactNumber: true,
+        whatsappNumber: true,
+        emailAddress: true,
+        isVerified: true,
+        isActive: true,
+        address: true,
+        city: true,
+        state: true,
+        country: true,
+        pincode: true,
+        sellRegion: true,
+        logoImage: true,
+        idType: true,
+        idNumber: true,
+        isIdVerified: true,
+        upiId: true,
+        registrationDt: true,
+        verifiedDt: true,
+        description: true,
+        rating: true,
+        latitude: true,
+        longitude: true,
+        district: true,
+        storeStatus: true,
+        autoCloseEnabled: true,
+        manualStatusUntil: true,
+        breakStartTime: true,
+        breakEndTime: true,
+        acceptingOrders: true,
+        holidayMode: true,
+        holidayMessage: true,
+        officialBusinessName: true,
+        gstNumber: true,
+        panNumber: true,
+        businessSlug: true,
         services: {
           where: { 
             isDeleted: false,
@@ -116,12 +204,53 @@ export class StoreDataAccess {
         },
       },
     });
+    
+    // Add businessTiming and tags as null since we're excluding them to avoid JSON parsing issues
+    return business ? { ...business, businessTiming: null, tags: null } as BusinessDAO : null;
   }
 
   async findById(id: string): Promise<BusinessDAO | null> {
-    return prisma.business.findUnique({
+    const business = await prisma.business.findUnique({
       where: { businessId: BigInt(id) },
-      include: {
+      select: {
+        businessId: true,
+        businessName: true,
+        sellerId: true,
+        contactNumber: true,
+        whatsappNumber: true,
+        emailAddress: true,
+        isVerified: true,
+        isActive: true,
+        address: true,
+        city: true,
+        state: true,
+        country: true,
+        pincode: true,
+        sellRegion: true,
+        logoImage: true,
+        idType: true,
+        idNumber: true,
+        isIdVerified: true,
+        upiId: true,
+        registrationDt: true,
+        verifiedDt: true,
+        description: true,
+        rating: true,
+        latitude: true,
+        longitude: true,
+        district: true,
+        storeStatus: true,
+        autoCloseEnabled: true,
+        manualStatusUntil: true,
+        breakStartTime: true,
+        breakEndTime: true,
+        acceptingOrders: true,
+        holidayMode: true,
+        holidayMessage: true,
+        officialBusinessName: true,
+        gstNumber: true,
+        panNumber: true,
+        businessSlug: true,
         services: {
           where: { 
             isDeleted: false,
@@ -138,6 +267,9 @@ export class StoreDataAccess {
         },
       },
     });
+    
+    // Add businessTiming and tags as null since we're excluding them to avoid JSON parsing issues
+    return business ? { ...business, businessTiming: null, tags: null } as BusinessDAO : null;
   }
 
   async count(filters: StoreRepositoryFilters = {}): Promise<number> {
