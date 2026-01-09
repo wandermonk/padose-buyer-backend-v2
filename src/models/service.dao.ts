@@ -52,18 +52,40 @@ export class ServiceDataAccess {
     const skip = (page - 1) * limit;
 
     // Build category filter if categorySlug provided
-    let categoryFilter: Prisma.CategoryWhereInput | undefined;
+    // Service model doesn't have a direct category relation, so we need to find category IDs first
+    let categoryIds: number[] | undefined;
     if (filters.categorySlug) {
-      categoryFilter = {
-        categoryRef: {
-          categoryName: {
-            contains: filters.categorySlug.replace(/-/g, ' '),
-            mode: 'insensitive',
-          },
+      const categoryName = filters.categorySlug.replace(/-/g, ' ');
+      const categories = await prisma.category.findMany({
+        where: {
           isActive: true,
-          categoryType: 'service',
+          categoryRef: {
+            categoryName: {
+              contains: categoryName,
+              mode: 'insensitive',
+            },
+            isActive: true,
+            categoryType: 'service',
+          },
         },
-      };
+        select: {
+          categoryId: true,
+        },
+      });
+      categoryIds = categories.map(c => Number(c.categoryId));
+      
+      // If no categories found, return empty result
+      if (categoryIds.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
     }
 
     const where: Prisma.ServiceWhereInput = {
@@ -79,8 +101,8 @@ export class ServiceDataAccess {
           isActive: true,
         },
       }),
-      ...(categoryFilter && {
-        category: categoryFilter,
+      ...(categoryIds && categoryIds.length > 0 && {
+        categoryId: { in: categoryIds },
       }),
       ...(filters.search && {
         OR: [
