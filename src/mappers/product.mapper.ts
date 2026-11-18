@@ -61,8 +61,11 @@ export function mapProductToDto(product: ProductDAO): ProductDto {
     },
     category: product.category?.categoryRef ? {
       id: String(product.category.categoryRef.categoryRefId),
-      name: product.category.categoryRef.categoryName || '',
-      slug: generateSlug(product.category.categoryRef.categoryName || '', product.category.categoryRef.categoryRefId),
+      name: product.category.categoryRef.subCategoryName || product.category.categoryRef.categoryName || '',
+      slug: generateSlug(
+        product.category.categoryRef.subCategoryName || product.category.categoryRef.categoryName || '',
+        product.category.categoryRef.categoryRefId
+      ),
     } : undefined,
   };
 }

@@ -58,7 +58,14 @@ export function mapServiceToDto(service: ServiceDAO): ServiceDto {
       name: '',
       slug: '',
     },
-    category: undefined, // Category relation not included - add if needed
+    category: service.category?.categoryRef ? {
+      id: String(service.category.categoryRef.categoryRefId),
+      name: service.category.categoryRef.subCategoryName || service.category.categoryRef.categoryName || '',
+      slug: generateSlug(
+        service.category.categoryRef.subCategoryName || service.category.categoryRef.categoryName || '',
+        service.category.categoryRef.categoryRefId
+      ),
+    } : undefined,
   };
 }
 

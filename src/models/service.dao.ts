@@ -21,7 +21,19 @@ export type ServiceDAO = Prisma.ServiceGetPayload<{
       orderBy: { displayOrder: 'asc' };
     };
   };
-}>;
+}> & {
+  // Category info fetched separately (Service doesn't have direct category relation in Prisma)
+  category?: {
+    categoryId: bigint;
+    categoryRefId: bigint;
+    categoryRef: {
+      categoryRefId: bigint;
+      categoryName: string | null;
+      subCategoryName: string | null;
+      image: string | null;
+    } | null;
+  } | null;
+};
 
 export interface ServiceRepositoryFilters {
   storeSlug?: string;
@@ -60,10 +72,10 @@ export class ServiceDataAccess {
         where: {
           isActive: true,
           categoryRef: {
-            categoryName: {
-              contains: categoryName,
-              mode: 'insensitive',
-            },
+            OR: [
+              { subCategoryName: { contains: categoryName, mode: 'insensitive' } },
+              { categoryName: { contains: categoryName, mode: 'insensitive' } },
+            ],
             isActive: true,
             categoryType: 'service',
           },
@@ -146,8 +158,67 @@ export class ServiceDataAccess {
       prisma.service.count({ where }),
     ]);
 
+    // Fetch category information for services (similar to products)
+    const serviceCategoryIds = [
+      ...new Set(
+        services
+          .map((s) => s.categoryId)
+          .filter((id): id is number => id !== null && id !== undefined)
+      ),
+    ];
+
+    const categoryMap = new Map<
+      number,
+      {
+        categoryId: bigint;
+        categoryRefId: bigint;
+        categoryRef: {
+          categoryRefId: bigint;
+          categoryName: string | null;
+          subCategoryName: string | null;
+          image: string | null;
+        } | null;
+      }
+    >();
+
+    if (serviceCategoryIds.length > 0) {
+      const categories = await prisma.category.findMany({
+        where: {
+          categoryId: { in: serviceCategoryIds.map((id) => BigInt(id)) },
+          isActive: true,
+        },
+        include: {
+          categoryRef: true,
+        },
+      });
+
+      categories.forEach((cat) => {
+        categoryMap.set(Number(cat.categoryId), {
+          categoryId: cat.categoryId,
+          categoryRefId: cat.categoryRefId,
+          categoryRef: cat.categoryRef
+            ? {
+                categoryRefId: cat.categoryRef.categoryRefId,
+                categoryName: cat.categoryRef.categoryName,
+                subCategoryName: cat.categoryRef.subCategoryName,
+                image: cat.categoryRef.image,
+              }
+            : null,
+        });
+      });
+    }
+
+    // Attach category info to services
+    const servicesWithCategory: ServiceDAO[] = services.map((service) => ({
+      ...service,
+      category:
+        service.categoryId !== null && service.categoryId !== undefined
+          ? categoryMap.get(service.categoryId) || null
+          : null,
+    }));
+
     return {
-      data: services,
+      data: servicesWithCategory,
       pagination: {
         page,
         limit,
@@ -191,7 +262,43 @@ export class ServiceDataAccess {
       },
     });
 
-    return service;
+    if (!service) {
+      return null;
+    }
+
+    // Fetch category information
+    let category: ServiceDAO['category'] = null;
+    if (service.categoryId !== null && service.categoryId !== undefined) {
+      const categoryData = await prisma.category.findFirst({
+        where: {
+          categoryId: BigInt(service.categoryId),
+          isActive: true,
+        },
+        include: {
+          categoryRef: true,
+        },
+      });
+
+      if (categoryData) {
+        category = {
+          categoryId: categoryData.categoryId,
+          categoryRefId: categoryData.categoryRefId,
+          categoryRef: categoryData.categoryRef
+            ? {
+                categoryRefId: categoryData.categoryRef.categoryRefId,
+                categoryName: categoryData.categoryRef.categoryName,
+                subCategoryName: categoryData.categoryRef.subCategoryName,
+                image: categoryData.categoryRef.image,
+              }
+            : null,
+        };
+      }
+    }
+
+    return {
+      ...service,
+      category,
+    };
   }
 
   private getOrderBy(sortBy?: string): Prisma.ServiceOrderByWithRelationInput {

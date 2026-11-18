@@ -57,12 +57,13 @@ export class ProductDataAccess {
     // Build category filter if categorySlug provided
     let categoryFilter: Prisma.CategoryWhereInput | undefined;
     if (filters.categorySlug) {
+      const categoryName = filters.categorySlug.replace(/-/g, ' ');
       categoryFilter = {
         categoryRef: {
-          categoryName: {
-            contains: filters.categorySlug.replace(/-/g, ' '),
-            mode: 'insensitive',
-          },
+          OR: [
+            { subCategoryName: { contains: categoryName, mode: 'insensitive' } },
+            { categoryName: { contains: categoryName, mode: 'insensitive' } },
+          ],
           isActive: true,
         },
       };
